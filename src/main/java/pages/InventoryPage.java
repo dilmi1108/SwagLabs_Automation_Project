@@ -35,16 +35,28 @@ public class InventoryPage {
         this.wait = new WebDriverWait(driver, Duration.ofSeconds(15));
     }
 
+    // Helper method to safely log to Extent Report
+    private void logToReport(Status status, String message) {
+        try {
+            if (ExtentReportManager.getTest() != null) {
+                ExtentReportManager.getTest().log(status, message);
+            }
+        } catch (Exception e) {
+            // Silently ignore if report is not initialized
+            System.out.println(status + ": " + message);
+        }
+    }
+
     public boolean isInventoryPageLoaded() {
         try {
-            ExtentReportManager.getTest().log(Status.INFO, "Verifying inventory page loaded");
+            logToReport(Status.INFO, "Verifying inventory page loaded");
             boolean loaded = wait.until(ExpectedConditions.visibilityOfElementLocated(pageTitle)).isDisplayed();
             if (loaded) {
-                ExtentReportManager.getTest().log(Status.PASS, "✓ Inventory page loaded successfully");
+                logToReport(Status.PASS, "✓ Inventory page loaded successfully");
             }
             return loaded;
         } catch (Exception e) {
-            ExtentReportManager.getTest().log(Status.FAIL, "Inventory page failed to load");
+            logToReport(Status.FAIL, "Inventory page failed to load");
             return false;
         }
     }
@@ -52,7 +64,7 @@ public class InventoryPage {
     public String getPageTitle() {
         try {
             String title = driver.findElement(pageTitle).getText();
-            ExtentReportManager.getTest().log(Status.INFO, "Page title: '" + title + "'");
+            logToReport(Status.INFO, "Page title: '" + title + "'");
             return title;
         } catch (Exception e) {
             return "";
@@ -61,124 +73,124 @@ public class InventoryPage {
 
     public int getProductCount() {
         try {
-            ExtentReportManager.getTest().log(Status.INFO, "Counting products on inventory page");
+            logToReport(Status.INFO, "Counting products on inventory page");
             int count = driver.findElements(productItems).size();
-            ExtentReportManager.getTest().log(Status.PASS, "✓ Found " + count + " products");
+            logToReport(Status.PASS, "✓ Found " + count + " products");
             return count;
         } catch (Exception e) {
-            ExtentReportManager.getTest().log(Status.FAIL, "Failed to count products");
+            logToReport(Status.FAIL, "Failed to count products");
             return 0;
         }
     }
 
     public List<String> getAllProductNames() {
         try {
-            ExtentReportManager.getTest().log(Status.INFO, "Fetching all product names");
+            logToReport(Status.INFO, "Fetching all product names");
             List<String> names = new ArrayList<>();
             for (WebElement element : driver.findElements(productNames)) {
                 names.add(element.getText());
             }
-            ExtentReportManager.getTest().log(Status.PASS, "✓ Retrieved " + names.size() + " product names");
+            logToReport(Status.PASS, "✓ Retrieved " + names.size() + " product names");
             return names;
         } catch (Exception e) {
-            ExtentReportManager.getTest().log(Status.FAIL, "Failed to fetch product names");
+            logToReport(Status.FAIL, "Failed to fetch product names");
             return new ArrayList<>();
         }
     }
 
     public List<Double> getAllProductPrices() {
         try {
-            ExtentReportManager.getTest().log(Status.INFO, "Fetching all product prices");
+            logToReport(Status.INFO, "Fetching all product prices");
             List<Double> prices = new ArrayList<>();
             for (WebElement element : driver.findElements(productPrices)) {
                 prices.add(Double.parseDouble(element.getText().replace("$", "")));
             }
-            ExtentReportManager.getTest().log(Status.PASS, "✓ Retrieved " + prices.size() + " product prices");
+            logToReport(Status.PASS, "✓ Retrieved " + prices.size() + " product prices");
             return prices;
         } catch (Exception e) {
-            ExtentReportManager.getTest().log(Status.FAIL, "Failed to fetch prices");
+            logToReport(Status.FAIL, "Failed to fetch prices");
             return new ArrayList<>();
         }
     }
 
     public void addProductToCart(int productIndex) {
         try {
-            ExtentReportManager.getTest().log(Status.INFO, "Adding product #" + (productIndex + 1) + " to cart");
+            logToReport(Status.INFO, "Adding product #" + (productIndex + 1) + " to cart");
             String productName = driver.findElements(productNames).get(productIndex).getText();
             driver.findElements(addToCartButtons).get(productIndex).click();
-            ExtentReportManager.getTest().log(Status.PASS, "✓ Added to cart: " + productName);
+            logToReport(Status.PASS, "✓ Added to cart: " + productName);
         } catch (Exception e) {
-            ExtentReportManager.getTest().log(Status.FAIL, "Failed to add product: " + e.getMessage());
+            logToReport(Status.FAIL, "Failed to add product: " + e.getMessage());
         }
     }
 
     public int getCartCount() {
         try {
             String count = driver.findElement(cartBadge).getText();
-            ExtentReportManager.getTest().log(Status.INFO, "Cart contains " + count + " item(s)");
+            logToReport(Status.INFO, "Cart contains " + count + " item(s)");
             return Integer.parseInt(count);
         } catch (Exception e) {
-            ExtentReportManager.getTest().log(Status.INFO, "Cart is empty");
+            logToReport(Status.INFO, "Cart is empty");
             return 0;
         }
     }
 
     public void sortProducts(String sortOption) {
         try {
-            ExtentReportManager.getTest().log(Status.INFO, "Sorting products by: " + sortOption);
+            logToReport(Status.INFO, "Sorting products by: " + sortOption);
             Select select = new Select(driver.findElement(sortDropdown));
             select.selectByVisibleText(sortOption);
             Thread.sleep(500);
-            ExtentReportManager.getTest().log(Status.PASS, "✓ Products sorted successfully");
+            logToReport(Status.PASS, "✓ Products sorted successfully");
         } catch (Exception e) {
-            ExtentReportManager.getTest().log(Status.FAIL, "Failed to sort: " + e.getMessage());
+            logToReport(Status.FAIL, "Failed to sort: " + e.getMessage());
         }
     }
 
     public boolean areProductImagesDisplayed() {
         try {
-            ExtentReportManager.getTest().log(Status.INFO, "Checking if product images are displayed");
+            logToReport(Status.INFO, "Checking if product images are displayed");
             List<WebElement> images = driver.findElements(productImages);
             boolean allDisplayed = images.stream().allMatch(WebElement::isDisplayed);
             if (allDisplayed) {
-                ExtentReportManager.getTest().log(Status.PASS, "✓ All " + images.size() + " product images displayed");
+                logToReport(Status.PASS, "✓ All " + images.size() + " product images displayed");
             }
             return allDisplayed;
         } catch (Exception e) {
-            ExtentReportManager.getTest().log(Status.FAIL, "Failed to verify images");
+            logToReport(Status.FAIL, "Failed to verify images");
             return false;
         }
     }
 
     public void openMenu() {
         try {
-            ExtentReportManager.getTest().log(Status.INFO, "Opening navigation menu");
+            logToReport(Status.INFO, "Opening navigation menu");
             driver.findElement(menuButton).click();
             Thread.sleep(500);
-            ExtentReportManager.getTest().log(Status.PASS, "✓ Menu opened");
+            logToReport(Status.PASS, "✓ Menu opened");
         } catch (Exception e) {
-            ExtentReportManager.getTest().log(Status.FAIL, "Failed to open menu: " + e.getMessage());
+            logToReport(Status.FAIL, "Failed to open menu: " + e.getMessage());
         }
     }
 
     public void logout() {
         try {
-            ExtentReportManager.getTest().log(Status.INFO, "Logging out");
+            logToReport(Status.INFO, "Logging out");
             openMenu();
             wait.until(ExpectedConditions.elementToBeClickable(logoutLink)).click();
-            ExtentReportManager.getTest().log(Status.PASS, "✓ Logged out successfully");
+            logToReport(Status.PASS, "✓ Logged out successfully");
         } catch (Exception e) {
-            ExtentReportManager.getTest().log(Status.FAIL, "Failed to logout: " + e.getMessage());
+            logToReport(Status.FAIL, "Failed to logout: " + e.getMessage());
         }
     }
 
     public void clickShoppingCart() {
         try {
-            ExtentReportManager.getTest().log(Status.INFO, "Navigating to shopping cart");
+            logToReport(Status.INFO, "Navigating to shopping cart");
             driver.findElement(shoppingCartIcon).click();
-            ExtentReportManager.getTest().log(Status.PASS, "✓ Opened shopping cart");
+            logToReport(Status.PASS, "✓ Opened shopping cart");
         } catch (Exception e) {
-            ExtentReportManager.getTest().log(Status.FAIL, "Failed to open cart: " + e.getMessage());
+            logToReport(Status.FAIL, "Failed to open cart: " + e.getMessage());
         }
     }
 }

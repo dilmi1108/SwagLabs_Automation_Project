@@ -18,6 +18,12 @@
         </classes>
     </test>
 
+    <test name="Inventory Page Tests - Problem User">
+        <classes>
+            <class name="tests.ProblemUserTest"/>
+        </classes>
+    </test>
+
     <!-- Uncomment to run on multiple browsers
     <test name="Firefox - Login Functionality Tests">
         <parameter name="browser" value="firefox"/>
