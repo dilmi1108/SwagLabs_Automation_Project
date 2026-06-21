@@ -5,192 +5,212 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.Select;
-import org.openqa.selenium.support.ui.WebDriverWait;
-import utils.ExtentReportManager;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
-public class InventoryPage {
-    private final WebDriver driver;
-    private final WebDriverWait wait;
+public class InventoryPage extends BasePage {
 
     // Locators
     private final By pageTitle = By.className("title");
-    private final By menuButton = By.id("react-burger-menu-btn");
-    private final By shoppingCartIcon = By.className("shopping_cart_link");
-    private final By cartBadge = By.className("shopping_cart_badge");
     private final By sortDropdown = By.className("product_sort_container");
     private final By productItems = By.className("inventory_item");
     private final By productNames = By.className("inventory_item_name");
     private final By productPrices = By.className("inventory_item_price");
     private final By productImages = By.cssSelector(".inventory_item_img img");
     private final By addToCartButtons = By.cssSelector("button[id^='add-to-cart']");
-    private final By logoutLink = By.id("logout_sidebar_link");
+    private final By removeButtons = By.cssSelector("button[id^='remove']");
 
     public InventoryPage(WebDriver driver) {
-        this.driver = driver;
-        this.wait = new WebDriverWait(driver, Duration.ofSeconds(15));
-    }
-
-    // Helper method to safely log to Extent Report
-    private void logToReport(Status status, String message) {
-        try {
-            if (ExtentReportManager.getTest() != null) {
-                ExtentReportManager.getTest().log(status, message);
-            }
-        } catch (Exception e) {
-            // Silently ignore if report is not initialized
-            System.out.println(status + ": " + message);
-        }
+        super(driver);
     }
 
     public boolean isInventoryPageLoaded() {
-        try {
-            logToReport(Status.INFO, "Verifying inventory page loaded");
-            boolean loaded = wait.until(ExpectedConditions.visibilityOfElementLocated(pageTitle)).isDisplayed();
-            if (loaded) {
-                logToReport(Status.PASS, "✓ Inventory page loaded successfully");
-            }
-            return loaded;
-        } catch (Exception e) {
-            logToReport(Status.FAIL, "Inventory page failed to load");
-            return false;
-        }
+        return safeIsDisplayed(pageTitle, "Inventory Page Title") 
+                && getCurrentUrl().contains("inventory.html");
     }
 
     public String getPageTitle() {
-        try {
-            String title = driver.findElement(pageTitle).getText();
-            logToReport(Status.INFO, "Page title: '" + title + "'");
-            return title;
-        } catch (Exception e) {
-            return "";
-        }
+        return safeGetText(pageTitle, "Page Title");
     }
 
     public int getProductCount() {
         try {
-            logToReport(Status.INFO, "Counting products on inventory page");
+            waitToBeVisible(productItems);
             int count = driver.findElements(productItems).size();
-            logToReport(Status.PASS, "✓ Found " + count + " products");
+            logToReport(Status.INFO, "Product count on page: " + count);
             return count;
         } catch (Exception e) {
-            logToReport(Status.FAIL, "Failed to count products");
+            logToReport(Status.FAIL, "Failed to count products. Exception: " + e.getMessage());
             return 0;
         }
     }
 
     public List<String> getAllProductNames() {
         try {
-            logToReport(Status.INFO, "Fetching all product names");
+            waitToBeVisible(productNames);
+            List<WebElement> elements = driver.findElements(productNames);
             List<String> names = new ArrayList<>();
-            for (WebElement element : driver.findElements(productNames)) {
+            for (WebElement element : elements) {
                 names.add(element.getText());
             }
-            logToReport(Status.PASS, "✓ Retrieved " + names.size() + " product names");
             return names;
         } catch (Exception e) {
-            logToReport(Status.FAIL, "Failed to fetch product names");
+            logToReport(Status.FAIL, "Failed to get all product names. Exception: " + e.getMessage());
             return new ArrayList<>();
         }
     }
 
     public List<Double> getAllProductPrices() {
         try {
-            logToReport(Status.INFO, "Fetching all product prices");
+            waitToBeVisible(productPrices);
+            List<WebElement> elements = driver.findElements(productPrices);
             List<Double> prices = new ArrayList<>();
-            for (WebElement element : driver.findElements(productPrices)) {
+            for (WebElement element : elements) {
                 prices.add(Double.parseDouble(element.getText().replace("$", "")));
             }
-            logToReport(Status.PASS, "✓ Retrieved " + prices.size() + " product prices");
             return prices;
         } catch (Exception e) {
-            logToReport(Status.FAIL, "Failed to fetch prices");
+            logToReport(Status.FAIL, "Failed to get all product prices. Exception: " + e.getMessage());
             return new ArrayList<>();
+        }
+    }
+
+    private WebElement getProductContainerByName(String productName) {
+        waitToBeVisible(productItems);
+        List<WebElement> items = driver.findElements(productItems);
+        for (WebElement item : items) {
+            WebElement nameEl = item.findElement(productNames);
+            if (nameEl.getText().equalsIgnoreCase(productName)) {
+                return item;
+            }
+        }
+        throw new RuntimeException("Product container not found for name: " + productName);
+    }
+
+    public void addProductToCartByName(String productName) {
+        try {
+            int initialCount = getCartCount();
+            WebElement container = getProductContainerByName(productName);
+            WebElement btn = container.findElement(addToCartButtons);
+            safeClick(btn, "Add to Cart button for " + productName);
+            wait.until(d -> getCartCount() == initialCount + 1);
+            logToReport(Status.PASS, "Added to cart: " + productName);
+        } catch (Exception e) {
+            logToReport(Status.FAIL, "Failed to add product '" + productName + "' to cart. Exception: " + e.getMessage());
+            throw e;
+        }
+    }
+
+    public void removeProductFromCartByName(String productName) {
+        try {
+            int initialCount = getCartCount();
+            WebElement container = getProductContainerByName(productName);
+            WebElement btn = container.findElement(removeButtons);
+            safeClick(btn, "Remove button for " + productName);
+            wait.until(d -> getCartCount() == initialCount - 1);
+            logToReport(Status.PASS, "Removed from cart: " + productName);
+        } catch (Exception e) {
+            logToReport(Status.FAIL, "Failed to remove product '" + productName + "' from cart. Exception: " + e.getMessage());
+            throw e;
         }
     }
 
     public void addProductToCart(int productIndex) {
         try {
-            logToReport(Status.INFO, "Adding product #" + (productIndex + 1) + " to cart");
+            int initialCount = getCartCount();
+            waitToBeVisible(addToCartButtons);
+            List<WebElement> buttons = driver.findElements(addToCartButtons);
             String productName = driver.findElements(productNames).get(productIndex).getText();
-            driver.findElements(addToCartButtons).get(productIndex).click();
-            logToReport(Status.PASS, "✓ Added to cart: " + productName);
+            safeClick(buttons.get(productIndex), "Add to Cart button for " + productName);
+            wait.until(d -> getCartCount() == initialCount + 1);
+            logToReport(Status.PASS, "Added product at index " + productIndex + " (" + productName + ") to cart");
         } catch (Exception e) {
-            logToReport(Status.FAIL, "Failed to add product: " + e.getMessage());
+            logToReport(Status.FAIL, "Failed to add product at index " + productIndex + ". Exception: " + e.getMessage());
+            throw e;
         }
     }
 
-    public int getCartCount() {
+    public void removeProductFromCart(int productIndex) {
         try {
-            String count = driver.findElement(cartBadge).getText();
-            logToReport(Status.INFO, "Cart contains " + count + " item(s)");
-            return Integer.parseInt(count);
+            int initialCount = getCartCount();
+            waitToBeVisible(removeButtons);
+            List<WebElement> buttons = driver.findElements(removeButtons);
+            String productName = driver.findElements(productNames).get(productIndex).getText();
+            safeClick(buttons.get(productIndex), "Remove button for " + productName);
+            wait.until(d -> getCartCount() == initialCount - 1);
+            logToReport(Status.PASS, "Removed product at index " + productIndex + " from cart");
         } catch (Exception e) {
-            logToReport(Status.INFO, "Cart is empty");
-            return 0;
+            logToReport(Status.FAIL, "Failed to remove product at index " + productIndex + ". Exception: " + e.getMessage());
+            throw e;
         }
     }
 
-    public void sortProducts(String sortOption) {
+    public boolean isProductInRemoveState(String productName) {
         try {
-            logToReport(Status.INFO, "Sorting products by: " + sortOption);
-            Select select = new Select(driver.findElement(sortDropdown));
-            select.selectByVisibleText(sortOption);
-            Thread.sleep(500);
-            logToReport(Status.PASS, "✓ Products sorted successfully");
+            WebElement container = getProductContainerByName(productName);
+            List<WebElement> btns = container.findElements(removeButtons);
+            return !btns.isEmpty() && btns.get(0).isDisplayed();
         } catch (Exception e) {
-            logToReport(Status.FAIL, "Failed to sort: " + e.getMessage());
-        }
-    }
-
-    public boolean areProductImagesDisplayed() {
-        try {
-            logToReport(Status.INFO, "Checking if product images are displayed");
-            List<WebElement> images = driver.findElements(productImages);
-            boolean allDisplayed = images.stream().allMatch(WebElement::isDisplayed);
-            if (allDisplayed) {
-                logToReport(Status.PASS, "✓ All " + images.size() + " product images displayed");
-            }
-            return allDisplayed;
-        } catch (Exception e) {
-            logToReport(Status.FAIL, "Failed to verify images");
             return false;
         }
     }
 
-    public void openMenu() {
+    public void clickProductByName(String productName) {
         try {
-            logToReport(Status.INFO, "Opening navigation menu");
-            driver.findElement(menuButton).click();
-            Thread.sleep(500);
-            logToReport(Status.PASS, "✓ Menu opened");
+            WebElement container = getProductContainerByName(productName);
+            WebElement nameLink = container.findElement(productNames);
+            nameLink.click();
+            logToReport(Status.PASS, "Clicked on product link for details: " + productName);
         } catch (Exception e) {
-            logToReport(Status.FAIL, "Failed to open menu: " + e.getMessage());
+            logToReport(Status.FAIL, "Failed to click on product name '" + productName + "'. Exception: " + e.getMessage());
+            throw e;
         }
     }
 
-    public void logout() {
-        try {
-            logToReport(Status.INFO, "Logging out");
-            openMenu();
-            wait.until(ExpectedConditions.elementToBeClickable(logoutLink)).click();
-            logToReport(Status.PASS, "✓ Logged out successfully");
-        } catch (Exception e) {
-            logToReport(Status.FAIL, "Failed to logout: " + e.getMessage());
-        }
+    public void sortProducts(String sortOption) {
+        selectDropdownByVisibleText(sortDropdown, sortOption, "Product Sort Dropdown");
     }
 
-    public void clickShoppingCart() {
+    public boolean areProductImagesDisplayed() {
         try {
-            logToReport(Status.INFO, "Navigating to shopping cart");
-            driver.findElement(shoppingCartIcon).click();
-            logToReport(Status.PASS, "✓ Opened shopping cart");
+            waitToBeVisible(productImages);
+            // Give images time to load assets over network
+            try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+            List<WebElement> images = driver.findElements(productImages);
+            if (images.isEmpty()) {
+                logToReport(Status.FAIL, "No product images found on page");
+                return false;
+            }
+
+            boolean allDisplayed = true;
+            int validImages = 0;
+
+            for (WebElement img : images) {
+                try {
+                    String src = img.getAttribute("src");
+                    boolean isDisplayed = img.isDisplayed();
+
+                    // Known problem_user has garbage image URL to break the site
+                    if (src != null && !src.isEmpty() && isDisplayed && !src.contains("WithGarbageOnItToBreakTheUrl")) {
+                        validImages++;
+                    } else {
+                        allDisplayed = false;
+                    }
+                } catch (Exception e) {
+                    allDisplayed = false;
+                }
+            }
+
+            if (allDisplayed) {
+                logToReport(Status.PASS, "All product images are displayed and valid");
+            } else {
+                logToReport(Status.WARNING, validImages + " out of " + images.size() + " product images are valid");
+            }
+            return allDisplayed;
         } catch (Exception e) {
-            logToReport(Status.FAIL, "Failed to open cart: " + e.getMessage());
+            logToReport(Status.FAIL, "Failed to verify product images. Exception: " + e.getMessage());
+            return false;
         }
     }
 }

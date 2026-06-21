@@ -3,21 +3,21 @@ package tests.listeners;
 import com.aventstack.extentreports.ExtentReports;
 import com.aventstack.extentreports.ExtentTest;
 import com.aventstack.extentreports.Status;
+import org.openqa.selenium.WebDriver;
 import org.testng.ITestContext;
 import org.testng.ITestListener;
 import org.testng.ITestResult;
+import tests.BaseTest;
 import utils.ExtentReportManager;
-
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import utils.ScreenshotUtils;
 
 public class TestListener implements ITestListener {
     private ExtentReports extent;
 
     @Override
     public void onStart(ITestContext context) {
-        String timestamp = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
-        String reportPath = "test-output/ExtentReport_" + timestamp + ".html";
+        // Consolidated single HTML report for the entire execution
+        String reportPath = "test-output/ExtentReport.html";
         extent = ExtentReportManager.createInstance(reportPath);
     }
 
@@ -43,6 +43,7 @@ public class TestListener implements ITestListener {
         if (test != null) {
             test.log(Status.PASS, "Test passed: " + result.getName());
         }
+        ExtentReportManager.removeTest();
     }
 
     @Override
@@ -53,7 +54,23 @@ public class TestListener implements ITestListener {
             if (result.getThrowable() != null) {
                 test.log(Status.FAIL, result.getThrowable());
             }
+
+            // Capture and attach screenshot on failure
+            try {
+                WebDriver driver = BaseTest.getDriver();
+                if (driver != null) {
+                    String relativePath = ScreenshotUtils.takeScreenshot(driver, result.getName());
+                    if (relativePath != null) {
+                        // Extent Report will look up relative path relative to its own folder (test-output/)
+                        test.addScreenCaptureFromPath(relativePath, "Failure Screenshot");
+                        test.log(Status.INFO, "Failure screenshot attached successfully.");
+                    }
+                }
+            } catch (Exception e) {
+                test.log(Status.WARNING, "Failed to capture or attach screenshot: " + e.getMessage());
+            }
         }
+        ExtentReportManager.removeTest();
     }
 
     @Override
@@ -65,5 +82,6 @@ public class TestListener implements ITestListener {
                 test.log(Status.SKIP, result.getThrowable());
             }
         }
+        ExtentReportManager.removeTest();
     }
 }

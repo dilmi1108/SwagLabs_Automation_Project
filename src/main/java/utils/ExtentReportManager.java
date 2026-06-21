@@ -9,25 +9,29 @@ public class ExtentReportManager {
     private static ExtentReports extent;
     private static final ThreadLocal<ExtentTest> test = new ThreadLocal<>();
 
-    public static ExtentReports createInstance(String fileName) {
-        ExtentSparkReporter sparkReporter = new ExtentSparkReporter(fileName);
-        sparkReporter.config().setTheme(Theme.DARK);
-        sparkReporter.config().setDocumentTitle("Login Test Automation Report");
-        sparkReporter.config().setReportName("Swag Labs - Complete Test Results");
-        sparkReporter.config().setTimeStampFormat("dd-MM-yyyy HH:mm:ss");
+    /**
+     * Initializes the ExtentReports instance if not already initialized.
+     */
+    public static synchronized ExtentReports createInstance(String fileName) {
+        if (extent == null) {
+            ExtentSparkReporter sparkReporter = new ExtentSparkReporter(fileName);
+            sparkReporter.config().setTheme(Theme.DARK);
+            sparkReporter.config().setDocumentTitle("Swag Labs Automation Report");
+            sparkReporter.config().setReportName("Swag Labs - Automation Test Results");
+            sparkReporter.config().setTimeStampFormat("dd-MM-yyyy HH:mm:ss");
 
-        extent = new ExtentReports();
-        extent.attachReporter(sparkReporter);
-        extent.setSystemInfo("Application", "Swag Labs");
-        extent.setSystemInfo("Operating System", System.getProperty("os.name"));
-        extent.setSystemInfo("User Name", System.getProperty("user.name"));
-        extent.setSystemInfo("Java Version", System.getProperty("java.version"));
-        extent.setSystemInfo("Java Runtime", System.getProperty("java.runtime.name"));
-
+            extent = new ExtentReports();
+            extent.attachReporter(sparkReporter);
+            extent.setSystemInfo("Application", "Swag Labs");
+            extent.setSystemInfo("Operating System", System.getProperty("os.name"));
+            extent.setSystemInfo("User Name", System.getProperty("user.name"));
+            extent.setSystemInfo("Java Version", System.getProperty("java.version"));
+            extent.setSystemInfo("Java Runtime", System.getProperty("java.runtime.name"));
+        }
         return extent;
     }
 
-    public static ExtentReports getExtent() {
+    public static synchronized ExtentReports getExtent() {
         return extent;
     }
 
